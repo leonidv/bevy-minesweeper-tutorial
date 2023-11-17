@@ -1,0 +1,19 @@
+[package]
+name = "board_plugin"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+bevy = { version = "0.12.0", default-features = false}
+bevy-inspector-egui = {version = "0.21.0", optional = true}
+colored = {version = "2.0.4", optional = true}
+rand = "0.8.5"
+serde = "1.0.192"
+
+
+[features]
+default = []
+debug = ["colored","bevy-inspector-egui"]
+

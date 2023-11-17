@@ -1,0 +1,8 @@
+{
+    "rust-analyzer.linkedProjects": [
+        "./board_plugin/Cargo.toml"
+    ],
+    "rust-analyzer.cargo.features": [
+       "debug"
+    ]
+}
