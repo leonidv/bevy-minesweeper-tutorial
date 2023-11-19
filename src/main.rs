@@ -1,7 +1,10 @@
 use bevy::{prelude::*, window::WindowResolution};
 
+
+
 #[cfg(feature = "debug")]
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use board_plugin::BoardPlugin;
 
 fn main() {
     let mut app = App::new();
@@ -18,6 +21,9 @@ fn main() {
 
     #[cfg(feature = "debug")]
     app.add_plugins(WorldInspectorPlugin::new());
+
+
+    app.add_plugins(BoardPlugin);
 
     // adapted from 0.8, 0.10 to 0.11
     app.add_systems(Startup, camera_setup);
