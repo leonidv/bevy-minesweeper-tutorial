@@ -5,6 +5,8 @@ use bevy::{prelude::*, window::WindowResolution};
 #[cfg(feature = "debug")]
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use board_plugin::BoardPlugin;
+use board_plugin::resources::BoardOptions;
+use board_plugin::resources::TileSize::Fixed;
 
 fn main() {
     let mut app = App::new();
@@ -22,6 +24,14 @@ fn main() {
     #[cfg(feature = "debug")]
     app.add_plugins(WorldInspectorPlugin::new());
 
+    app.insert_resource(BoardOptions {
+        map_size: (20,20),
+        bomb_count: 40,
+        tile_padding: 3.0,
+        // different from tutorial due to WindowDescriptor is not available as a resource
+        tile_size: Fixed(20.0),
+        ..Default::default()
+    });
 
     app.add_plugins(BoardPlugin);
 
