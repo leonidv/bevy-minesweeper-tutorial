@@ -6,12 +6,20 @@ use crate::resources::{BoardPosition, TileSize};
 use bevy::log;
 use bevy::prelude::*;
 use resources::tile_map::TileMap;
-use resources::BoardOptions;
+use resources::{tile::Tile, BoardOptions};
 
 pub struct BoardPlugin;
 
 impl BoardPlugin {
-    fn create_board(mut commands: Commands, board_options: Option<Res<BoardOptions>>) {
+    fn create_board(
+        mut commands: Commands,
+        board_options: Option<Res<BoardOptions>>,
+        asset_server: Res<AssetServer>,
+    ) {
+        // adopted, added Handle
+        let font: Handle<Font> = asset_server.load("fonts/pixeled.ttf");
+        let bomb_image: Handle<Image> = asset_server.load("sprites/bomb.png");
+
         let options = match board_options {
             None => BoardOptions::default(),
             Some(o) => o.clone(),
@@ -54,15 +62,15 @@ impl BoardPlugin {
             .spawn((
                 Name::new("Board"),
                 // adopted, original source doesn't pass the hierarchy check and gives the warning
-                // https://bevyengine.org/learn/errors/#b0004 
+                // https://bevyengine.org/learn/errors/#b0004
                 SpatialBundle {
                     transform: Transform::from_translation(board_position),
                     ..Default::default()
                 },
             ))
             .with_children(|parent| {
-                parent
-                    .spawn(SpriteBundle {
+                parent 
+                    .spawn(SpriteBundle { // one big white box
                         sprite: Sprite {
                             color: Color::WHITE,
                             custom_size: Some(board_size),
@@ -73,31 +81,106 @@ impl BoardPlugin {
                     })
                     .insert(Name::new("Background"));
 
-                for (y, line) in tile_map.iter().enumerate() {
-                    for (x, tile) in line.iter().enumerate() {
-                        parent.spawn(SpriteBundle {
-                            sprite: Sprite {
-                                color: Color::GRAY,
-                                custom_size: Some(Vec2::splat(
-                                    tile_size - options.tile_padding as f32,
-                                )),
+                Self::spawn_tiles(
+                    parent,
+                    tile_map,
+                    tile_size,
+                    options.tile_padding,
+                    Color::GRAY,
+                    bomb_image,
+                    font,
+                );
+            });
+    }
+
+    fn spawn_tiles(
+        parent: &mut ChildBuilder,
+        tile_map: TileMap,
+        tile_size: f32,
+        tile_padding: f32,
+        background_color: Color,
+        bomb_image: Handle<Image>,
+        font: Handle<Font>,
+    ) {
+        for (y, line) in tile_map.iter().enumerate() {
+            for (x, tile) in line.iter().enumerate() {
+                let mut commands = parent.spawn(SpriteBundle {
+                    sprite: Sprite {
+                        color: background_color,
+                        custom_size: Some(Vec2::splat(tile_size - tile_padding as f32)),
+                        ..Default::default()
+                    },
+                    transform: Transform::from_xyz(
+                        (x as f32 * tile_size) + (tile_size / 2.),
+                        (y as f32 * tile_size) + (tile_size / 2.),
+                        1.,
+                    ),
+                    ..Default::default()
+                });
+
+                commands
+                    .insert(Name::new(format!("Tile: ({}, {})", x, y)))
+                    .insert(Coordinates {
+                        x: x as u16,
+                        y: y as u16,
+                    });
+
+                match tile {
+                    Tile::Bomb => {
+                        commands.insert(components::Bomb);
+                        commands.with_children(|parent| {
+                            parent.spawn(SpriteBundle {
+                                sprite: Sprite {
+                                    custom_size: Some(Vec2::splat(tile_size - tile_padding)),
+                                    ..Default::default()
+                                },
+                                transform: Transform::from_xyz(0., 0., 1.),
+                                texture: bomb_image.clone(),
                                 ..Default::default()
-                            },
-                            transform: Transform::from_xyz(
-                                (x as f32 * tile_size) + (tile_size / 2.),
-                                (y as f32 * tile_size) + (tile_size / 2.),
-                                1.,
-                            ),
-                            ..Default::default()
-                        })
-                        .insert(Name::new(format!("Tile: ({}, {})", x, y)))
-                        .insert(Coordinates {
-                            x: x as u16,
-                            y: y as u16
+                            });
                         });
                     }
+                    Tile::BombNeighbour(bombs_count) => {
+                        commands.insert(components::BombNeighbor{count: *bombs_count});
+                        commands.with_children(|parent| {
+                            parent.spawn(Self::bomb_count_text_bundle(
+                                *bombs_count,
+                                font.clone(),
+                                tile_size - tile_padding,
+                            ));
+                        });
+                    }
+                    Tile::Empty => (),
                 }
-            });
+            }
+        }
+    }
+
+    fn bomb_count_text_bundle(count: u8, font: Handle<Font>, font_size: f32) -> Text2dBundle {
+        let color = match count {
+            1 => Color::WHITE,
+            2 => Color::GREEN,
+            3 => Color::YELLOW_GREEN,
+            4 => Color::YELLOW,
+            5 => Color::ORANGE,
+            _ => Color::PURPLE,
+        };
+
+        let style = TextStyle {
+            font,
+            font_size,
+            color,
+        };
+        // adopted 0.9 to 0.10 and simplified API
+        let text =
+            Text::from_section(count.to_string(), style).with_alignment(TextAlignment::Center);
+
+        Text2dBundle {
+            text,
+            // z-order, print text on top of the tile
+            transform: Transform::from_xyz(0.0, 0.0, 1.0),
+            ..Default::default()
+        }
     }
 }
 
@@ -105,5 +188,10 @@ impl Plugin for BoardPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, Self::create_board);
         log::info!("Loaded Board Plugin");
+
+        #[cfg(feature = "debug")]
+        {
+            // can't adopt, missing code.
+        }
     }
 }

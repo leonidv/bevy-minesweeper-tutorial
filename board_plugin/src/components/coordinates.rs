@@ -3,7 +3,7 @@ use std::ops::{Add, Sub};
 use bevy::prelude::Component;
 
 #[cfg(feature = "debug")]
-use bevy_inspector_egui::{prelude::*, reflect_inspector};
+use bevy_inspector_egui::prelude::InspectorOptions;
 
 // adopted https://github.com/jakobhellermann/bevy-inspector-egui/blob/main/docs/MIGRATION_GUIDE_0.15_0.16.md
 #[cfg_attr(feature = "debug", derive(InspectorOptions))]

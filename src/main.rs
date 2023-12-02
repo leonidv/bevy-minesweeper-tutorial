@@ -12,7 +12,7 @@ fn main() {
     let mut app = App::new();
 
     let mut primary_window = Window::default();
-    primary_window.resolution = WindowResolution::new(700.0, 800.0);
+    primary_window.resolution = WindowResolution::new(850., 850.0);
     primary_window.title = "Mine Sweeper!".to_string();
     // adapted from 0.8
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -26,10 +26,10 @@ fn main() {
 
     app.insert_resource(BoardOptions {
         map_size: (20,20),
-        bomb_count: 40,
+        bomb_count: 90,
         tile_padding: 3.0,
         // different from tutorial due to WindowDescriptor is not available as a resource
-        tile_size: Fixed(20.0),
+        tile_size: Fixed(35.0),
         ..Default::default()
     });
 
