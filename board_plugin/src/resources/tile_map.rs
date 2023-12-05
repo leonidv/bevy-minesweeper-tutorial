@@ -3,6 +3,7 @@ use crate::resources::tile::Tile;
 
 use std::ops::{Deref, DerefMut};
 
+use bevy::reflect::Reflect;
 use rand::{thread_rng, Rng};
 
 // Delta coordinates for all 8 square neighbors
@@ -18,11 +19,19 @@ const SQUARE_COORDINATES: [(i8, i8); 8] = [
     (1, 1),   // Top Right
 ];
 
+#[cfg_attr(
+    feature = "debug",
+    derive(bevy_inspector_egui::prelude::InspectorOptions)
+)]
+#[cfg_attr(feature = "debug", derive(Reflect))]
 #[derive(Debug, Clone)]
 pub struct TileMap {
     bomb_count: u16,
     height: u16,
     width: u16,
+    
+    #[cfg_attr(feature="debug", reflect(ignore))]
+    #[cfg_attr(feature="debug", reflect(default = "Vec::new"))]
     map: Vec<Vec<Tile>>,
 }
 

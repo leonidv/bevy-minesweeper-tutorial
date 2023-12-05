@@ -16,8 +16,9 @@ impl Tile {
         matches!(self, Self::Bomb)
     }
 
-    pub fn console_output(&self) -> String {
-        format!(
+    pub fn console_output(&self) -> String {        
+        #[cfg(feature = "debug")]
+        return format!(
             "{}",
             match self {
                 Tile::Bomb => "*".bright_red(),
@@ -29,6 +30,9 @@ impl Tile {
                 },
                 Tile::Empty => " ".black(),
             }
-        )
+        );
+
+        #[cfg(not(feature = "debug"))]
+        return "".to_string();
     }
 }

@@ -2,12 +2,15 @@ use std::fmt::{self, Display, Formatter};
 use std::ops::{Add, Sub};
 use bevy::prelude::Component;
 
+use bevy::reflect::Reflect;
 #[cfg(feature = "debug")]
 use bevy_inspector_egui::prelude::InspectorOptions;
 
 // adopted https://github.com/jakobhellermann/bevy-inspector-egui/blob/main/docs/MIGRATION_GUIDE_0.15_0.16.md
 #[cfg_attr(feature = "debug", derive(InspectorOptions))]
-#[derive(Clone, Copy, Component)] // lv - add derives on demand
+#[cfg_attr(feature = "debug", derive(Reflect))]
+#[derive(Debug, Clone, Copy, Hash, PartialEq, Eq)] // lv - add derives on demand
+#[derive(Component)]
 // todo
 pub struct Coordinates {
     pub x: u16,

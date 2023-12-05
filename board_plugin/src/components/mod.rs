@@ -4,7 +4,7 @@ pub use bomb_neighbor::BombNeighbor;
 
 mod coordinates;
 
-mod bomb;
-mod bomb_neighbor;
-mod uncover;
+pub mod bomb;
+pub mod bomb_neighbor;
+pub mod uncover;
 

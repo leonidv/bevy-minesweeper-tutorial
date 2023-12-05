@@ -1,12 +1,25 @@
 pub mod components;
 pub mod resources;
 
+mod bounds;
+pub(crate) mod events;
+mod systems;
+
+use std::collections::HashMap;
+
 use crate::components::Coordinates;
+use crate::components::bomb::Bomb;
+use crate::components::bomb_neighbor::BombNeighbor;
 use crate::resources::{BoardPosition, TileSize};
 use bevy::log;
 use bevy::prelude::*;
+use events::TileTriggerEvent;
 use resources::tile_map::TileMap;
 use resources::{tile::Tile, BoardOptions};
+
+use bevy::math::Vec3Swizzles;
+use bounds::Bounds2;
+use resources::board::Board;
 
 pub struct BoardPlugin;
 
@@ -19,7 +32,7 @@ impl BoardPlugin {
         // adopted, added Handle
         let font: Handle<Font> = asset_server.load("fonts/pixeled.ttf");
         let bomb_image: Handle<Image> = asset_server.load("sprites/bomb.png");
-
+        
         let options = match board_options {
             None => BoardOptions::default(),
             Some(o) => o.clone(),
@@ -57,6 +70,9 @@ impl BoardPlugin {
         #[cfg(feature = "debug")]
         log::info!("{}", tile_map.console_output());
 
+        let mut covered_tiles =
+            HashMap::with_capacity((tile_map.width() * tile_map.height()).into());
+
         //adopted 0.8 to 0.9
         commands
             .spawn((
@@ -69,8 +85,9 @@ impl BoardPlugin {
                 },
             ))
             .with_children(|parent| {
-                parent 
-                    .spawn(SpriteBundle { // one big white box
+                parent
+                    .spawn(SpriteBundle {
+                        // one big white box
                         sprite: Sprite {
                             color: Color::WHITE,
                             custom_size: Some(board_size),
@@ -83,31 +100,56 @@ impl BoardPlugin {
 
                 Self::spawn_tiles(
                     parent,
-                    tile_map,
+                    &tile_map,
                     tile_size,
                     options.tile_padding,
                     Color::GRAY,
                     bomb_image,
                     font,
+                    Color::DARK_GRAY,
+                    &mut covered_tiles,
                 );
             });
+
+        commands.insert_resource(Board {
+            tile_map: tile_map.clone(),
+            bounds: Bounds2 {
+                position: board_position.xy(),
+                size: board_size,
+            },
+            tile_size,
+            covered_tiles,
+        });
     }
 
     fn spawn_tiles(
         parent: &mut ChildBuilder,
-        tile_map: TileMap,
+        tile_map: &TileMap,
         tile_size: f32,
         tile_padding: f32,
         background_color: Color,
         bomb_image: Handle<Image>,
         font: Handle<Font>,
+        covered_tile_color: Color,
+        covered_tiles: &mut HashMap<Coordinates, Entity>,
     ) {
+        // remove duplicate of logic from original tutorial
+        let tile_real_size = tile_size - tile_padding;
+        let sprites_size = Some(Vec2::splat(tile_real_size));
+
         for (y, line) in tile_map.iter().enumerate() {
             for (x, tile) in line.iter().enumerate() {
+                let coordinates = Coordinates {
+                    x: x as u16,
+                    y: y as u16,
+                };
+
+                log::info!("Spawn tile {:?} at {:?}", tile, coordinates);
+
                 let mut commands = parent.spawn(SpriteBundle {
                     sprite: Sprite {
                         color: background_color,
-                        custom_size: Some(Vec2::splat(tile_size - tile_padding as f32)),
+                        custom_size: sprites_size,
                         ..Default::default()
                     },
                     transform: Transform::from_xyz(
@@ -120,10 +162,23 @@ impl BoardPlugin {
 
                 commands
                     .insert(Name::new(format!("Tile: ({}, {})", x, y)))
-                    .insert(Coordinates {
-                        x: x as u16,
-                        y: y as u16,
-                    });
+                    .insert(coordinates);
+
+                commands.with_children(|parent| {
+                    let entity = parent
+                        .spawn(SpriteBundle {
+                            sprite: Sprite {
+                                custom_size: sprites_size,
+                                color: covered_tile_color,
+                                ..Default::default()
+                            },
+                            transform: Transform::from_xyz(0.0, 0.0, 2.0),
+                            ..Default::default()
+                        })
+                        .insert(Name::new("Tile Cover"))
+                        .id();
+                    covered_tiles.insert(coordinates, entity);
+                });
 
                 match tile {
                     Tile::Bomb => {
@@ -131,7 +186,7 @@ impl BoardPlugin {
                         commands.with_children(|parent| {
                             parent.spawn(SpriteBundle {
                                 sprite: Sprite {
-                                    custom_size: Some(Vec2::splat(tile_size - tile_padding)),
+                                    custom_size: sprites_size,
                                     ..Default::default()
                                 },
                                 transform: Transform::from_xyz(0., 0., 1.),
@@ -146,8 +201,9 @@ impl BoardPlugin {
                             parent.spawn(Self::bomb_count_text_bundle(
                                 *bombs_count,
                                 font.clone(),
-                                tile_size - tile_padding,
-                            ));
+                                tile_real_size,
+                            ))
+                            ;
                         });
                     }
                     Tile::Empty => (),
@@ -186,7 +242,12 @@ impl BoardPlugin {
 
 impl Plugin for BoardPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, Self::create_board);
+        app.add_systems(Startup, Self::create_board)
+            .add_systems(Update, systems::input::input_handling)
+            .add_systems(Update, systems::uncover::trigger_event_handler)
+            .add_systems(Update, systems::uncover::uncover_tiles)
+            .add_event::<TileTriggerEvent>();
+
         log::info!("Loaded Board Plugin");
 
         #[cfg(feature = "debug")]
