@@ -7,9 +7,10 @@ mod systems;
 
 use std::collections::HashMap;
 
-use crate::components::Coordinates;
 use crate::components::bomb::Bomb;
 use crate::components::bomb_neighbor::BombNeighbor;
+use crate::components::Coordinates;
+use crate::components::uncover::Uncover;
 use crate::resources::{BoardPosition, TileSize};
 use bevy::log;
 use bevy::prelude::*;
@@ -32,7 +33,7 @@ impl BoardPlugin {
         // adopted, added Handle
         let font: Handle<Font> = asset_server.load("fonts/pixeled.ttf");
         let bomb_image: Handle<Image> = asset_server.load("sprites/bomb.png");
-        
+
         let options = match board_options {
             None => BoardOptions::default(),
             Some(o) => o.clone(),
@@ -73,6 +74,8 @@ impl BoardPlugin {
         let mut covered_tiles =
             HashMap::with_capacity((tile_map.width() * tile_map.height()).into());
 
+        let mut safe_start: Option<Entity> = None;
+
         //adopted 0.8 to 0.9
         commands
             .spawn((
@@ -108,8 +111,15 @@ impl BoardPlugin {
                     font,
                     Color::DARK_GRAY,
                     &mut covered_tiles,
+                    &mut safe_start,
                 );
             });
+
+        if options.safe_start {
+            if let Some(entity) = safe_start {
+                commands.entity(entity).insert(Uncover);
+            }
+        }
 
         commands.insert_resource(Board {
             tile_map: tile_map.clone(),
@@ -132,6 +142,7 @@ impl BoardPlugin {
         font: Handle<Font>,
         covered_tile_color: Color,
         covered_tiles: &mut HashMap<Coordinates, Entity>,
+        safe_start_entity: &mut Option<Entity>,
     ) {
         // remove duplicate of logic from original tutorial
         let tile_real_size = tile_size - tile_padding;
@@ -178,6 +189,9 @@ impl BoardPlugin {
                         .insert(Name::new("Tile Cover"))
                         .id();
                     covered_tiles.insert(coordinates, entity);
+                    if safe_start_entity.is_none() && *tile == Tile::Empty {
+                        *safe_start_entity = Some(entity);
+                    }
                 });
 
                 match tile {
@@ -196,14 +210,15 @@ impl BoardPlugin {
                         });
                     }
                     Tile::BombNeighbour(bombs_count) => {
-                        commands.insert(components::BombNeighbor{count: *bombs_count});
+                        commands.insert(components::BombNeighbor {
+                            count: *bombs_count,
+                        });
                         commands.with_children(|parent| {
                             parent.spawn(Self::bomb_count_text_bundle(
                                 *bombs_count,
                                 font.clone(),
                                 tile_real_size,
-                            ))
-                            ;
+                            ));
                         });
                     }
                     Tile::Empty => (),

@@ -35,6 +35,7 @@ fn main() {
         tile_padding: 3.0,
         // different from tutorial due to WindowDescriptor is not available as a resource
         tile_size: Fixed(35.0),
+        safe_start: true,
         ..Default::default()
     });
 
