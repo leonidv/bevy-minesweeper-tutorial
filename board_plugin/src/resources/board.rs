@@ -23,6 +23,9 @@ pub struct Board {
     #[reflect(ignore)]
     #[reflect(default = "HashMap::new")]
     pub covered_tiles: HashMap<Coordinates, Entity>,
+
+    pub entity : Entity,
+
 }
 
 impl Board {

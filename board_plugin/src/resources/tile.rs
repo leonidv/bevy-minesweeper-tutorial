@@ -4,7 +4,7 @@ use bevy::ecs::component::Component;
 #[cfg(feature = "debug")]
 use colored::Colorize;
 
-#[derive(Debug,Clone, Copy, PartialEq, Eq, Component)]
+#[derive(Debug,Clone, Copy, PartialEq, Eq)]
 pub enum Tile {
     Bomb,
     BombNeighbour(u8),
