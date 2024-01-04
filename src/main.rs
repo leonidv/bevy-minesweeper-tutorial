@@ -6,7 +6,7 @@ use bevy_inspector_egui::quick::ResourceInspectorPlugin;
 #[cfg(feature = "debug")]
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use board_plugin::components::Coordinates;
-use board_plugin::resources::{BoardOptions, BoardSize};
+use board_plugin::resources::{BoardOptions, BoardSize, BoardAssets, SpriteMaterial};
 use board_plugin::resources::TileSize::Fixed;
 use board_plugin::BoardPlugin;
 
@@ -36,18 +36,8 @@ fn main() {
                 ..Default::default()
             }),
     );
-
-    app.insert_resource(BoardOptions {
-        map_size: BoardSize { columns: 20, rows: 20 },
-        bomb_count: 60,
-        position: board_plugin::resources::BoardPosition::Centered { offset: Vec3::ZERO },            
-        tile_padding: 3.0,
-        // different from tutorial due to WindowDescriptor is not available as a resource
-        tile_size: Fixed(35.0),
-        safe_start: true,
-        game_state: AppState::InGame,
-        pause_state: AppState::Pause,
-    });
+    // adapted from 0.8, 0.10 to 0.11
+    app.add_systems(Startup, (camera_setup, board_setup));
 
     app.add_state::<AppState>();
     app.add_plugins(BoardPlugin{
@@ -55,8 +45,6 @@ fn main() {
         pause_state: AppState::Pause,
     });
 
-    // adapted from 0.8, 0.10 to 0.11
-    app.add_systems(Startup, camera_setup);
 
     #[cfg(feature = "debug")]
     {
@@ -76,4 +64,32 @@ fn main() {
 fn camera_setup(mut commands: Commands) {
     // adopted 0.7 to 0.8
     commands.spawn(Camera2dBundle::default());
+}
+
+fn board_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
+    commands.insert_resource(BoardAssets{
+        label: "Default".to_string(),
+        board_material: SpriteMaterial::color(Color::WHITE),
+        tile_material: SpriteMaterial::color(Color::DARK_GRAY),
+        covered_tile_material: SpriteMaterial::color(Color::GRAY),
+        bomb_counter_font: asset_server.load("fonts/pixeled.ttf"),
+        bomb_counter_colors: BoardAssets::default_colors(),
+        flag_material: SpriteMaterial::texture(&asset_server.load("sprites/flag.png")),
+        bomb_material: SpriteMaterial::texture(&asset_server.load("sprites/bomb.png")),
+        menu_font: asset_server.load("fonts/neuropol_x_rg.otf"),
+    });
+
+    commands.insert_resource(BoardOptions {
+        map_size: BoardSize { columns: 20, rows: 20 },
+        bomb_count: 60,
+        position: board_plugin::resources::BoardPosition::Centered { offset: Vec3::ZERO },            
+        tile_padding: 3.0,
+        // different from tutorial due to WindowDescriptor is not available as a resource
+        tile_size: Fixed(35.0),
+        safe_start: true,
+        game_state: AppState::InGame,
+        pause_state: AppState::Pause,
+    });
+    
+
 }

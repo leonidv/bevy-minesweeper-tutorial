@@ -19,6 +19,7 @@ use resources::{tile::Tile, BoardOptions};
 use bevy::math::Vec3Swizzles;
 use bounds::Bounds2;
 use resources::board::Board;
+use resources::BoardAssets;
 
 /// White box
 const BACKGROUND_Z: f32 = 0.0;
@@ -79,16 +80,12 @@ impl<T: States> BoardPlugin<T> {
         mut commands: Commands,
         board_options: Res<BoardOptions<T>>,
         board_option: Option<Res<Board>>,
-        asset_server: Res<AssetServer>,
+        board_assets: Res<BoardAssets>
     ) {
         // if board already exists, do nothing
         if board_option.is_some() {
             return;
         }
-
-        // adopted, added Handle
-        let font: Handle<Font> = asset_server.load("fonts/pixeled.ttf");
-        let bomb_image: Handle<Image> = asset_server.load("sprites/bomb.png");
 
         let options = board_options.clone();
 
@@ -146,13 +143,10 @@ impl<T: States> BoardPlugin<T> {
                     parent,
                     &tile_map,
                     tile_size,
-                    options.tile_padding,
-                    Color::GRAY,
-                    bomb_image,
-                    font,
-                    Color::DARK_GRAY,
+                    options.tile_padding,                    
                     &mut covered_tiles,
                     &mut safe_start,
+                    board_assets.as_ref()
                 );
             })
             .id();
@@ -180,12 +174,9 @@ impl<T: States> BoardPlugin<T> {
         tile_map: &TileMap,
         tile_size: f32,
         tile_padding: f32,
-        background_color: Color,
-        bomb_image: Handle<Image>,
-        font: Handle<Font>,
-        covered_tile_color: Color,
         covered_tiles: &mut HashMap<Coordinates, Entity>,
         safe_start_entity: &mut Option<Entity>,
+        board_assets: &BoardAssets,
     ) {
         // remove duplicate of logic from original tutorial
         let tile_real_size = tile_size - tile_padding;
@@ -200,9 +191,9 @@ impl<T: States> BoardPlugin<T> {
 
                 log::info!("Spawn tile {:?} at {:?}", tile, coordinates);
 
-                let mut commands = parent.spawn(SpriteBundle {
+                let mut commands = parent.spawn(SpriteBundle {                    
                     sprite: Sprite {
-                        color: background_color,
+                        color: board_assets.tile_material.color,
                         custom_size: sprites_size,
                         ..Default::default()
                     },
@@ -223,7 +214,7 @@ impl<T: States> BoardPlugin<T> {
                         .spawn(SpriteBundle {
                             sprite: Sprite {
                                 custom_size: sprites_size,
-                                color: covered_tile_color,
+                                color: board_assets.covered_tile_material.color,
                                 ..Default::default()
                             },
                             transform: Transform::from_xyz(0.0, 0.0, TILE_COVER_Z),
@@ -247,7 +238,7 @@ impl<T: States> BoardPlugin<T> {
                                     ..Default::default()
                                 },
                                 transform: Transform::from_xyz(0., 0., TILE_INFO_Z),
-                                texture: bomb_image.clone(),
+                                texture: board_assets.bomb_material.texture.clone(),
                                 ..Default::default()
                             });
                         });
@@ -258,9 +249,9 @@ impl<T: States> BoardPlugin<T> {
                         });
                         commands.with_children(|parent| {
                             parent.spawn(Self::bomb_count_text_bundle(
-                                *bombs_count,
-                                font.clone(),
+                                *bombs_count,                                
                                 tile_real_size,
+                                board_assets
                             ));
                         });
                     }
@@ -270,19 +261,12 @@ impl<T: States> BoardPlugin<T> {
         }
     }
 
-    fn bomb_count_text_bundle(count: u8, font: Handle<Font>, font_size: f32) -> Text2dBundle {
-        let color = match count {
-            1 => Color::WHITE,
-            2 => Color::GREEN,
-            3 => Color::YELLOW_GREEN,
-            4 => Color::YELLOW,
-            5 => Color::ORANGE,
-            _ => Color::PURPLE,
-        };
+    fn bomb_count_text_bundle(count: u8, font_size: f32, board_assets: &BoardAssets) -> Text2dBundle {
+        let color = board_assets.bomb_counter_color(count);
 
         let style = TextStyle {
-            font,
-            font_size,
+            font: board_assets.bomb_counter_font.clone(),
+            font_size: font_size,
             color,
         };
         // adopted 0.9 to 0.10 and simplified API
@@ -301,13 +285,13 @@ impl<T: States> BoardPlugin<T> {
         mut commands: Commands,
         keys: Res<Input<KeyCode>>,
         board: Res<Board>,
-        asset_server: Res<AssetServer>,
+        board_assets: Res<BoardAssets>,
         board_options: Res<BoardOptions<T>>,
     ) {
         if keys.just_released(KeyCode::G) {
             log::info!("G is released");
             commands.entity(board.entity).despawn_recursive();
-            BoardPlugin::create_board(commands, board_options, None, asset_server)
+            BoardPlugin::create_board(commands, board_options, None, board_assets)
         }
     }
 
@@ -316,12 +300,12 @@ impl<T: States> BoardPlugin<T> {
         keys: Res<Input<KeyCode>>,
         mut next_state: ResMut<NextState<T>>,
         board_options: Res<BoardOptions<T>>,
-        asset_server: Res<AssetServer>,
+        board_assets: Res<BoardAssets>,
     ) {
         if keys.just_released(KeyCode::P) {
             next_state.set(board_options.pause_state.clone());
 
-            let font: Handle<Font> = asset_server.load("fonts/neuropol_x_rg.otf");
+            let font: Handle<Font> = board_assets.menu_font.clone();
             let text_style = TextStyle {
                 font: font,
                 font_size: board_options.tile_size_px(),
