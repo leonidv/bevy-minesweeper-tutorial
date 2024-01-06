@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy::log;
 
+use crate::events::BoardCompletedEvent;
+use crate::events::BombExplosionEvent;
 use crate::{
     components::{bomb::Bomb, bomb_neighbor::BombNeighbor, uncover::Uncover, Coordinates},
     events::TileTriggerEvent,
@@ -27,7 +29,9 @@ pub fn uncover_tiles(
     mut commands: Commands,
     mut board: ResMut<Board>,
     children: Query<(Entity, &Parent), With<Uncover>>,
-    parents: Query<(&Coordinates, Option<&Bomb>, Option<&BombNeighbor>)>,
+    parents: Query<(&Coordinates, Option<&Bomb>, Option<&BombNeighbor>)>,    
+    mut board_compeleted_event_wr: EventWriter<BoardCompletedEvent>,
+    mut board_bomb_explosion_event_wr: EventWriter<BombExplosionEvent>
 ) {
     for (entity, parent) in children.iter() {
         commands.entity(entity).despawn_recursive();
@@ -42,6 +46,11 @@ pub fn uncover_tiles(
             }
         }; 
 
+        if board.is_completed() {
+            log::info!("Board is compeleted 🍾");
+            board_compeleted_event_wr.send(BoardCompletedEvent);
+        }
+
         match board.try_uncover_tile(coordinates) {
             None => log::info!("Tried to uncover an already uncovered tile"),
             Some(e) => { 
@@ -50,8 +59,8 @@ pub fn uncover_tiles(
         }
 
         if bomb.is_some() {
-            log::info!("Boom!");
-            // TODO: Add explosion event
+            log::info!("Boom 💥!");
+            board_bomb_explosion_event_wr.send(BombExplosionEvent);
         }
         // If the tile is empty (no bomb near tile)...
         else if bomb_counter.is_none() {

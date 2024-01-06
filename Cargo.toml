@@ -18,3 +18,11 @@ debug = ["board_plugin/debug", "bevy-inspector-egui"]
 members = [
     "board_plugin"
 ]
+
+# Enable optimizations for dependencies (incl. Bevy), but not for our code:
+[profile.dev.package."*"]
+opt-level = 3
+
+# Maybe also enable only a small amount of optimization for our code:
+[profile.dev]
+opt-level = 1

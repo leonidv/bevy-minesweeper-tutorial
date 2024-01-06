@@ -80,8 +80,8 @@ fn board_setup(mut commands: Commands, asset_server: Res<AssetServer>) {
     });
 
     commands.insert_resource(BoardOptions {
-        map_size: BoardSize { columns: 20, rows: 20 },
-        bomb_count: 60,
+        map_size: BoardSize { columns: 4, rows: 4 },
+        bomb_count: 2,
         position: board_plugin::resources::BoardPosition::Centered { offset: Vec3::ZERO },            
         tile_padding: 3.0,
         // different from tutorial due to WindowDescriptor is not available as a resource

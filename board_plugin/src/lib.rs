@@ -5,14 +5,13 @@ mod bounds;
 pub(crate) mod events;
 mod systems;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::components::uncover::Uncover;
 use crate::components::{Coordinates, PauseCover};
-use crate::resources::{BoardPosition, TileSize};
 use bevy::log;
 use bevy::prelude::*;
-use events::TileTriggerEvent;
+use events::{TileTriggerEvent, TileMarkEvent,BombExplosionEvent, BoardCompletedEvent};
 use resources::tile_map::TileMap;
 use resources::{tile::Tile, BoardOptions};
 
@@ -22,15 +21,17 @@ use resources::board::Board;
 use resources::BoardAssets;
 
 /// White box
-const BACKGROUND_Z: f32 = 0.0;
+pub(crate) const BACKGROUND_Z: f32 = 0.0;
 /// Tiles - boxed above background
-const TILE_Z: f32 = 1.0;
+pub(crate) const TILE_Z: f32 = 1.0;
 /// Count of neighors bombs, bomb, etc.
-const TILE_INFO_Z: f32 = 2.0;
+pub(crate) const TILE_BOMB_COUNTS: f32 = 2.0;
 /// Box above tile which is still not uncover by player
-const TILE_COVER_Z: f32 = 3.0;
+pub(crate) const TILE_COVER_Z: f32 = 3.0;
+/// Flag for marked tiles
+pub(crate) const TILE_FLAG_Z: f32 = 4.0;
 /// Pause box
-const PAUSE_COVER_Z: f32 = 100.0;
+pub(crate) const PAUSE_COVER_Z: f32 = 100.0;
 
 // adopted 0.9 to 0.10, https://bevyengine.org/learn/migration-guides/0.9-0.10/#states
 pub struct BoardPlugin<T>
@@ -55,6 +56,7 @@ impl<T: States> Plugin for BoardPlugin<T> {
                     systems::input::input_handling,
                     systems::uncover::trigger_event_handler,
                     systems::uncover::uncover_tiles,
+                    systems::mark::mark_tiles,
                     Self::recreate_board,
                     Self::pause,
                 )
@@ -64,7 +66,10 @@ impl<T: States> Plugin for BoardPlugin<T> {
                 Update,
                 (Self::unpause).run_if(in_state(self.pause_state.clone())),
             )
-            .add_event::<TileTriggerEvent>();
+            .add_event::<TileTriggerEvent>()
+            .add_event::<TileMarkEvent>()
+            .add_event::<BombExplosionEvent>()
+            .add_event::<BoardCompletedEvent>();
 
         log::info!("Loaded Board Plugin");
 
@@ -165,6 +170,7 @@ impl<T: States> BoardPlugin<T> {
             },
             tile_size,
             covered_tiles,
+            marked_tiles: HashSet::new(),
             entity: board_entity,
         });
     }
@@ -237,7 +243,7 @@ impl<T: States> BoardPlugin<T> {
                                     custom_size: sprites_size,
                                     ..Default::default()
                                 },
-                                transform: Transform::from_xyz(0., 0., TILE_INFO_Z),
+                                transform: Transform::from_xyz(0., 0., TILE_BOMB_COUNTS),
                                 texture: board_assets.bomb_material.texture.clone(),
                                 ..Default::default()
                             });
@@ -276,7 +282,7 @@ impl<T: States> BoardPlugin<T> {
         Text2dBundle {
             text,
             // z-order, print text on top of the tile
-            transform: Transform::from_xyz(0.0, 0.0, TILE_INFO_Z),
+            transform: Transform::from_xyz(0.0, 0.0, TILE_BOMB_COUNTS),
             ..Default::default()
         }
     }

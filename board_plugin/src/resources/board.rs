@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use crate::bounds::Bounds2;
 use crate::{Coordinates, TileMap};
@@ -19,13 +19,22 @@ pub struct Board {
 
     pub bounds: Bounds2,
     pub tile_size: f32,
-    
+
     #[reflect(ignore)]
     #[reflect(default = "HashMap::new")]
     pub covered_tiles: HashMap<Coordinates, Entity>,
 
-    pub entity : Entity,
+    #[reflect(ignore)]
+    #[reflect(default = "HashSet::new")]
+    pub marked_tiles: HashSet<Coordinates>,
 
+    pub entity: Entity,
+}
+
+pub(crate) enum ToggleMarkResult {
+    FlagIsSet(Entity),
+    FlagIsUnset(Entity),
+    DidNothing
 }
 
 impl Board {
@@ -59,7 +68,33 @@ impl Board {
 
     /// We try to uncover a tile, returning the entity
     pub fn try_uncover_tile(&mut self, coordinates: &Coordinates) -> Option<Entity> {
-        return self.covered_tiles.remove(coordinates);
+        return if self.marked_tiles.contains(coordinates) {
+            None
+        } else {
+            self.covered_tiles.remove(coordinates)
+        }
+    }
+
+
+    /// Different from tutorial. use custom enum ToggleMarkResult instead of Option<(Entity,Bool>)
+    pub(crate) fn try_toggle_mark(
+        &mut self,
+        coordinates: &Coordinates,
+    ) -> ToggleMarkResult {
+        // can set flag only on covered tiles
+        return match self.covered_tiles.get(coordinates) {
+            Some(entity) => {
+                if self.marked_tiles.contains(coordinates) {
+                    // Different from tutorial. Don't create fn unmark_title
+                    self.marked_tiles.remove(coordinates);
+                    ToggleMarkResult::FlagIsUnset(entity.clone())
+                } else {
+                    self.marked_tiles.insert(*coordinates);
+                    ToggleMarkResult::FlagIsSet(entity.clone())
+                }       
+            }
+            None => ToggleMarkResult::DidNothing,
+        }
     }
 
     /// We retrieve the adjancent covered tile entities of `coordinates`
@@ -70,5 +105,9 @@ impl Board {
             .filter_map(|c| self.covered_tiles.get(&c))
             .copied()
             .collect();
+    }
+
+    pub fn is_completed(&self) -> bool {
+        return self.tile_map.bomb_count() as usize == self.covered_tiles.len();
     }
 }

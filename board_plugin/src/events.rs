@@ -8,3 +8,14 @@ use crate::components::Coordinates;
 pub struct TileTriggerEvent{ 
     pub coordinates: Coordinates
 }
+
+#[derive(Debug, Clone, Copy, Event)]
+pub struct TileMarkEvent{
+    pub coordinates : Coordinates
+}
+
+#[derive(Debug, Clone, Copy, Event)]
+pub struct BoardCompletedEvent;
+
+#[derive(Debug, Clone, Copy, Event)]
+pub struct BombExplosionEvent;
