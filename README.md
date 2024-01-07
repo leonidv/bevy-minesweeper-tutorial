@@ -10,6 +10,9 @@ Due to it I have little difference between original tutorial and my solution not
 full support of [bevy-inspector-egui](http://crates.io/crates/bevy-inspector-egui) implemented later (Chapter 6 and 7) than in the tutorial.
 
 Also I suppose that some  techniques from the tutorial is outdated (for ex., layout of tiles). This repository close to original tutorial.
+
+And I'm not sure, that my code run without debug feature 🤗
+
 # Chapters and commits
 | Article                                                                                                                                                  | Commit                                                                                                          | Full source                                                                                                  |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
